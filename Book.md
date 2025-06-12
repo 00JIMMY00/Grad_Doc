@@ -1,7 +1,3 @@
-Understood. I’ll prepare a professional, strictly academic documentation for your graduation project based on the provided GitHub repository. The focus will be on the RAG component more than backend/frontend, formatted as a comprehensive Word-style report with diagrams, structured sections, and module-level insights.
-
-I'll get started and let you know when the documentation is ready for your review.
-
 
 # **Design and Implementation of a Local Retrieval-Augmented Generation (RAG) System**
 
