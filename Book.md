@@ -30,13 +30,13 @@ I'll get started and let you know when the documentation is ready for your revie
    4.2. RAG Pipeline Workflow
    4.3. Document Storage with PostgreSQL and pgvector Extension
    4.4. Embedding Generation with Cohere API
-   4.5. LLM Integration (Google PaLM API and DeepSeek Models)
+   4.5. LLM Integration (Google Gemini API and DeepSeek Models)
 
 5. **Technology Stack and Tools**
    5.1. FastAPI (Backend Web Framework)
    5.2. PostgreSQL Database and pgvector Extension
    5.3. Cohere Embeddings API
-   5.4. Google PaLM API / DeepSeek LLM for Query Answering
+   5.4. Google Gemini API / DeepSeek LLM for Query Answering
    5.5. Frontend Framework (Web Interface)
    5.6. Docker and Deployment Configuration
 
@@ -80,14 +80,14 @@ In this introductory section, we outline the background and context that motivat
 
 ### 1.1. Background and Context
 
-Large Language Models (LLMs) such as GPT-3 and PaLM 2 have demonstrated an impressive ability to generate human-like text and answer questions. However, they are inherently limited to the data they were trained on and can suffer from **hallucinations** – confident-sounding but incorrect statements. As organizations and individuals seek to apply LLMs to specialized domains or private datasets, two major challenges arise:
+Large Language Models (LLMs) such as GPT-3 and Gemini have demonstrated an impressive ability to generate human-like text and answer questions. However, they are inherently limited to the data they were trained on and can suffer from **hallucinations** – confident-sounding but incorrect statements. As organizations and individuals seek to apply LLMs to specialized domains or private datasets, two major challenges arise:
 
 * **Knowledge Limitations:** An LLM cannot know facts or data added after its training cutoff, nor details specific to a company’s internal documents if those were never in its training set. For example, a model might not accurately answer questions about a new policy document or an unpublished research paper.
 * **Accuracy and Trust:** Even when an LLM attempts to answer, it might produce plausible but incorrect information (hallucinations) or be unable to cite sources for its statements. In high-stakes domains (medical, legal, enterprise data) this is unacceptable without verification.
 
 To overcome these issues, the AI community introduced **Retrieval-Augmented Generation (RAG)** around 2020 as a framework to give LLMs access to external knowledge bases. In RAG, when a user asks a question, the system first performs a **retrieval step**: searching a collection of documents for relevant information. The retrieved text (such as paragraphs or “chunks” from documents) is then provided to the LLM along with the original query. This additional context “grounds” the LLM’s answer in factual references. It’s analogous to an “open-book exam” where the model can refer to a book (the documents) instead of relying solely on memory. The result is a more accurate and up-to-date response, often with source citations, increasing the answer’s trustworthiness.
 
-In recent years, RAG has gained significance as a technique to build intelligent assistants and QA systems on private data (company knowledge bases, personal notes, academic literature, etc.). Tech companies and open-source communities have created tools to facilitate RAG, including vector databases for efficient similarity search and APIs for high-quality embeddings. This project builds on these advances by creating a small-scale but end-to-end RAG system that can be run locally. It leverages a **PostgreSQL** database with the **pgvector** extension as the document store, uses **embedding models** to encode textual data into vectors for semantic search, and integrates with large language models (via **Google’s PaLM API** or a local model like **DeepSeek** R1) to generate answers. The chosen technologies situate this project at the intersection of natural language processing, information retrieval, and software engineering for AI applications.
+In recent years, RAG has gained significance as a technique to build intelligent assistants and QA systems on private data (company knowledge bases, personal notes, academic literature, etc.). Tech companies and open-source communities have created tools to facilitate RAG, including vector databases for efficient similarity search and APIs for high-quality embeddings. This project builds on these advances by creating a small-scale but end-to-end RAG system that can be run locally. It leverages a **PostgreSQL** database with the **pgvector** extension as the document store, uses **embedding models** to encode textual data into vectors for semantic search, and integrates with large language models (via **Google’s Gemini API** or a local model like **DeepSeek** R1) to generate answers. The chosen technologies situate this project at the intersection of natural language processing, information retrieval, and software engineering for AI applications.
 
 ### 1.2. Problem Statement
 
@@ -107,13 +107,13 @@ The solution developed is a **Local RAG Question-Answering Application**. At a h
 
 * **Document Knowledge Base:** We maintain a collection of documents (the knowledge source) in a PostgreSQL database. Each document is broken down into manageable chunks, and each chunk is stored along with its semantic vector embedding. The use of pgvector (PostgreSQL’s vector extension) allows similarity search over these embeddings directly via SQL queries.
 * **Retrieval Module:** When a user poses a question (query), the system generates an embedding for the query (using the same embedding model used for documents). It then performs a vector similarity search in the database to retrieve the most relevant document chunks. This acts as the “open book” for the LLM – providing context that likely contains the answer.
-* **Generation Module:** The retrieved text chunks are then combined with the user’s query to form an augmented prompt. This prompt is passed to a Large Language Model (LLM) which generates the final answer. In our implementation, we have integrated support for two types of LLMs: (a) an external API (Google’s PaLM 2 model via the PaLM API) for high-quality large-model inference, and (b) a local LLM (DeepSeek R1, running via an Ollama server) for an entirely self-contained setup. The LLM’s response is expected to incorporate the provided context, thereby yielding an answer that is grounded in the content of the documents.
+* **Generation Module:** The retrieved text chunks are then combined with the user’s query to form an augmented prompt. This prompt is passed to a Large Language Model (LLM) which generates the final answer. In our implementation, we have integrated support for two types of LLMs: (a) an external API (Google’s Gemini model via the Gemini API) for high-quality large-model inference, and (b) a local LLM (DeepSeek R1, running via an Ollama server) for an entirely self-contained setup. The LLM’s response is expected to incorporate the provided context, thereby yielding an answer that is grounded in the content of the documents.
 * **Frontend Interface:** The system includes a simple web-based user interface (a frontend web application) through which users can input questions and view answers. This interface communicates with the backend (FastAPI server) via RESTful calls. It is primarily a convenience for demonstration – the focus of the project is the backend RAG pipeline – but it makes the QA system interactive and user-friendly.
 * **Local Deployment:** All components can be run in a local environment or local network. The database (PostgreSQL) and the FastAPI application can be containerized using Docker for ease of deployment. Because the solution can use a local LLM and local database, it is feasible to run the entire stack offline (after initial setup) – addressing use cases where internet access is restricted or data must remain on-premises for compliance.
 
 In essence, the solution operationalizes the RAG concept: it **embeds documents into a vector store, retrieves relevant information on-demand, and feeds it to an LLM to produce answers**. By doing so, it ensures that the answers are both **accurate** (pulled from a trusted knowledge source) and **contextual** (leveraging the generative power of LLMs). Figure 4.1 in the System Architecture section will illustrate how these components interact within the system.
 
-The remainder of this documentation is organized as follows: Section 2 provides theoretical background on RAG and related concepts (embeddings, transformers, vector databases). Section 3 states the project’s objectives and the motivation for choosing a local RAG approach, including expected use cases. Section 4 describes the system architecture in detail, including diagrams of the pipeline and explanations of each component. Section 5 enumerates the technology stack and tools used (FastAPI, PostgreSQL/pgvector, Cohere API, PaLM API, etc.), explaining why each was chosen and how they fit into the project’s structure. In Section 6, we walk through the codebase structure and main modules of the implementation, mapping directories and files to their functionality. Section 7 delves into the main processes (document ingestion, vector generation/storage, query processing) with pseudocode and narrative explanations. Section 8 covers project management aspects such as timeline, team roles, and challenges encountered during development. Section 9 suggests future improvements and extensions to the system (e.g., better retrieval algorithms, scaling considerations, multi-modal capabilities). Finally, Section 10 concludes the report. Appendices are provided for a glossary of terms, list of figures/tables, and a bibliography of references used.
+The remainder of this documentation is organized as follows: Section 2 provides theoretical background on RAG and related concepts (embeddings, transformers, vector databases). Section 3 states the project’s objectives and the motivation for choosing a local RAG approach, including expected use cases. Section 4 describes the system architecture in detail, including diagrams of the pipeline and explanations of each component. Section 5 enumerates the technology stack and tools used (FastAPI, PostgreSQL/pgvector, Cohere API, Gemini API, etc.), explaining why each was chosen and how they fit into the project’s structure. In Section 6, we walk through the codebase structure and main modules of the implementation, mapping directories and files to their functionality. Section 7 delves into the main processes (document ingestion, vector generation/storage, query processing) with pseudocode and narrative explanations. Section 8 covers project management aspects such as timeline, team roles, and challenges encountered during development. Section 9 suggests future improvements and extensions to the system (e.g., better retrieval algorithms, scaling considerations, multi-modal capabilities). Finally, Section 10 concludes the report. Appendices are provided for a glossary of terms, list of figures/tables, and a bibliography of references used.
 
 By the end of this document, the reader should have a comprehensive understanding of what was built, how it works, and why certain design decisions were made, all in the context of modern AI practices for retrieval-augmented generation.
 
@@ -175,7 +175,7 @@ In summary, embeddings enable us to transform textual data into a mathematical f
 
 ### 2.3. Transformers and their Role in RAG Systems
 
-**Transformers** are a type of neural network architecture that has revolutionized natural language processing. Introduced in 2017 (“Attention is All You Need”), the transformer architecture uses self-attention mechanisms to effectively model relationships in sequential data, and it enables training of extremely large models on language tasks. Modern Large Language Models (LLMs) such as GPT-3, PaLM, and open-source models like LLaMA are all based on the transformer architecture.
+**Transformers** are a type of neural network architecture that has revolutionized natural language processing. Introduced in 2017 (“Attention is All You Need”), the transformer architecture uses self-attention mechanisms to effectively model relationships in sequential data, and it enables training of extremely large models on language tasks. Modern Large Language Models (LLMs) such as GPT-3, Gemini, and open-source models like LLaMA are all based on the transformer architecture.
 
 In the context of RAG:
 
@@ -242,7 +242,7 @@ Key aspects of the goal:
 * We focus on the core RAG pipeline and not on peripheral features. For example, our system supports QA on a single collection of documents and does not cover advanced features like user authentication, multi-user sessions, feedback loops for answers, etc. These could be added in a production system but are outside our current scope.
 * The size of the document corpus and scale of the system is moderate. We aim to handle, say, dozens to hundreds of documents and still retrieve answers in a reasonable time (a few seconds at most). Handling millions of documents or sub-second responses consistently would be more in the domain of an industrial system, which we do not explicitly target in this academic prototype (though we discuss scaling in Section 9).
 * We implement enough of a frontend to demonstrate the functionality, but the project is not primarily about web development or UI design. The frontend is kept simple (a basic web page where one can input questions and see answers) – most emphasis is on the backend logic (embedding, database, LLM interaction).
-* The accuracy of the system’s answers is largely dependent on the chosen models (embedding model and the LLM). We are not developing new NLP models; rather, we integrate existing ones (Cohere, PaLM, etc.). Model performance optimization (like fine-tuning, custom training) is considered out of scope. Instead, we treat the models as black boxes accessed via APIs or libraries.
+* The accuracy of the system’s answers is largely dependent on the chosen models (embedding model and the LLM). We are not developing new NLP models; rather, we integrate existing ones (Cohere, Gemini, etc.). Model performance optimization (like fine-tuning, custom training) is considered out of scope. Instead, we treat the models as black boxes accessed via APIs or libraries.
 * While we do use proper software structure and include things like database migration (Alembic) and containerization (Docker) as part of making the system “production-ready” in a basic sense, we do not delve into extensive production deployment concerns (like auto-scaling, monitoring, security hardening beyond basic CORS settings, etc.). The scope is academic/prototype: get it working correctly and cleanly, rather than full enterprise hardening.
 
 In summary, the project’s goal is to showcase a working RAG application on local resources. If someone were to take this project and point it at a folder of text files, they could ask questions and get answers based on those files. That’s the essence. We measure success by the system’s ability to retrieve relevant info and form a correct answer, not by, say, beating some benchmark or handling thousands of queries per second.
@@ -253,14 +253,14 @@ Several motivations underpinned the decision to build a **local RAG solution** a
 
 * **Data Privacy and Security:** In many cases, the documents we want to query may contain sensitive or proprietary information (company documents, personal notes, confidential research). Sending their content to external cloud services (for embedding or answering) raises privacy concerns. A local RAG system keeps data on the user’s own machines or private network. Only minimal elements need to reach external APIs (for example, if using an embedding API, only the text being embedded is sent; if using a local embedding model even that can be avoided). By using a local vector database and optionally a local LLM, we minimize exposure of content. This is crucial for industries with strict data regulations. As noted by an NVIDIA blog, using a self-hosted LLM and on-prem data store can **preserve data privacy** – sensitive data stays on-prem while still enabling advanced QA.
 * **Offline or Edge Capability:** A local solution can function without internet access (especially if both embedding and LLM components are run offline). This is beneficial for environments with limited or no connectivity, or for edge deployments (imagine a field computer with a knowledge base that must answer questions without cloud support). The optional integration with DeepSeek R1 (a smaller model that can run locally) exemplifies the desire to have an offline-capable mode. As one commentary put it: local models via frameworks like Ollama allow you to run LLMs “free, private, fast, and offline”. This project is a step toward that ideal scenario where your AI assistant doesn’t depend on an internet connection.
-* **Cost Considerations:** Using large LLM APIs (like OpenAI or Google PaLM) can be costly, especially as usage scales. A local system might incur upfront costs (GPU hardware, etc.) but could be more economical in the long run for heavy usage since it doesn’t pay per request. Our implementation allows switching between a paid API (PaLM) and a free local model (DeepSeek). The motivation is to demonstrate that one can avoid ongoing API costs by leveraging local models; even if the local model’s quality is lower, it might be a worthwhile trade-off for certain uses. Additionally, using PostgreSQL (which is open-source) instead of a managed proprietary vector store avoids subscription costs.
+* **Cost Considerations:** Using large LLM APIs (like OpenAI or Google Gemini) can be costly, especially as usage scales. A local system might incur upfront costs (GPU hardware, etc.) but could be more economical in the long run for heavy usage since it doesn’t pay per request. Our implementation allows switching between a paid API (Gemini) and a free local model (DeepSeek). The motivation is to demonstrate that one can avoid ongoing API costs by leveraging local models; even if the local model’s quality is lower, it might be a worthwhile trade-off for certain uses. Additionally, using PostgreSQL (which is open-source) instead of a managed proprietary vector store avoids subscription costs.
 * **Learning and Customization:** From an academic/project standpoint, building the system locally (as opposed to assembling cloud services) provides a deeper learning experience. We get to “open the hood” and see how each part works, and we can customize each component. For example, we can fine-tune how we chunk documents, or we could swap out embedding models easily. If everything were abstracted behind a cloud API, those opportunities might be limited. A local stack gives the developers full control and visibility. This aligns with the educational aspect of this project (indeed the repository was described as an educational project built step-by-step).
 * **Performance:** For certain interactive applications, minimizing network latency is important. A local system serving an internal user base can be very responsive because the query doesn’t travel to an external server (except perhaps for a quick embedding call). Especially if the LLM is local, the only latency is computation time. With proper hardware, this could be faster than going to an API (which involves network overhead and shared server queues). While our project is not heavily optimized for low latency, the framework is there for real-time interaction, and future improvements could exploit local GPU acceleration for embeddings and LLM to make it real-time.
 * **Demonstration of Independence:** Another subtle motivation was to demonstrate the feasibility of building an independent Q\&A system without needing big tech’s full stack. There’s a growing open-source AI movement. Using tools like Cohere (for embeddings) and local LLMs like DeepSeek, orchestrated with open-source frameworks (FastAPI, Postgres), shows that smaller organizations or teams can build sophisticated AI applications. Cohere itself promotes RAG as an approach for enterprise AI, highlighting that it can mitigate inaccuracies in generative models. By implementing with mostly self-hostable components, we align with that vision of AI accessible on one’s own terms.
 
 In essence, the motivation boils down to **control** – control over data, control over costs, and control over the system’s behavior. With a local RAG solution, the organization or user has full control of their question-answering capability, which is very appealing compared to relying on remote services where you cannot be sure how your data is handled or when an API might change or become unavailable.
 
-It’s worth noting that we did include an option to use Google’s PaLM API for LLM responses. That might seem to contradict the “local” emphasis, but the rationale is pragmatic: at the time of writing, very large models (hundreds of billions of parameters) are difficult to run on typical local hardware. PaLM 2 offers powerful language generation that can improve answer quality. We wanted the project to demonstrate integration with a state-of-the-art model as well. However, the architecture is designed such that one can unplug the PaLM API and use a smaller local model instead – fulfilling the primary motivation of local deployment, if one is willing to accept some reduction in answer fluency or correctness. This flexibility is another motivator: the system can slide along the spectrum from fully local (all components on-prem) to hybrid (local retrieval with cloud LLM) as needed.
+It’s worth noting that we did include an option to use Google’s Gemini API for LLM responses. That might seem to contradict the “local” emphasis, but the rationale is pragmatic: at the time of writing, very large models (hundreds of billions of parameters) are difficult to run on typical local hardware. Gemini offers powerful language generation that can improve answer quality. We wanted the project to demonstrate integration with a state-of-the-art model as well. However, the architecture is designed such that one can unplug the Gemini API and use a smaller local model instead – fulfilling the primary motivation of local deployment, if one is willing to accept some reduction in answer fluency or correctness. This flexibility is another motivator: the system can slide along the spectrum from fully local (all components on-prem) to hybrid (local retrieval with cloud LLM) as needed.
 
 ### 3.3. Expected Outcomes and Use Cases
 
@@ -291,11 +291,11 @@ In conclusion, the motivation and objectives of the project are rooted in creati
 
 ## 4. System Architecture
 
-In this section, we describe the architecture of the RAG system developed in this project. We begin with a high-level overview of the system’s architecture, then explain the workflow of the RAG pipeline from document ingestion to query answering. We then focus on specific components: how documents are stored using PostgreSQL and the pgvector extension, how embeddings are generated using Cohere’s API, and how Large Language Models (LLMs) are integrated (specifically the Google PaLM API and the DeepSeek local model). Throughout this section, we will use diagrams and references to the implementation to clarify how data and requests flow through the system.
+In this section, we describe the architecture of the RAG system developed in this project. We begin with a high-level overview of the system’s architecture, then explain the workflow of the RAG pipeline from document ingestion to query answering. We then focus on specific components: how documents are stored using PostgreSQL and the pgvector extension, how embeddings are generated using Cohere’s API, and how Large Language Models (LLMs) are integrated (specifically the Google Gemini API and the DeepSeek local model). Throughout this section, we will use diagrams and references to the implementation to clarify how data and requests flow through the system.
 
 ### 4.1. High-Level Architecture of the RAG System
 
-&#x20;*Figure 4.1: High-level architecture of the Retrieval-Augmented Generation (RAG) system. The user interacts via a web frontend (left), submitting a query. The backend consists of a retrieval component and a generation component. The retrieval component (center) takes the query, converts it to an embedding, and searches a vector database of document embeddings (PostgreSQL with pgvector) to fetch relevant text chunks from the knowledge base (right). These retrieved pieces of context are then combined with the query and passed to the generation component (an LLM). The LLM (Google PaLM or a local DeepSeek model) produces a final answer that is grounded in the provided context. This answer is returned to the user. The architecture ensures the LLM’s response is augmented with and supported by external knowledge.*
+&#x20;*Figure 4.1: High-level architecture of the Retrieval-Augmented Generation (RAG) system. The user interacts via a web frontend (left), submitting a query. The backend consists of a retrieval component and a generation component. The retrieval component (center) takes the query, converts it to an embedding, and searches a vector database of document embeddings (PostgreSQL with pgvector) to fetch relevant text chunks from the knowledge base (right). These retrieved pieces of context are then combined with the query and passed to the generation component (an LLM). The LLM (Google Gemini or a local DeepSeek model) produces a final answer that is grounded in the provided context. This answer is returned to the user. The architecture ensures the LLM’s response is augmented with and supported by external knowledge.*
 
 At a high level, our RAG system follows a typical client-server architecture augmented with an AI retrieval-generation pipeline:
 
@@ -309,8 +309,8 @@ At a high level, our RAG system follows a typical client-server architecture aug
   4. **Retrieval Logic:** This isn’t a separate physical component, but rather the code (inside the FastAPI route handler or a service) that ties the embedding service and vector DB together. When a query arrives: it calls the embedding service to get query\_vector, then performs a DB query to get top-K relevant chunks. These chunks of text are then collated. This part essentially implements the “retrieval” in retrieval-augmented generation. In our code, this might be a function in a `routes` or `services` module that we might call `retrieve_documents(query)` which returns a list of text snippets.
   5. **Generation Service (LLM interface):** This component handles sending the augmented prompt to a large language model and getting the result. We implemented this with two modes:
 
-     * Using **Google PaLM API**: We constructed a prompt that includes the retrieved text (context) and the user’s question. We then send this prompt to the PaLM text generation API (via Google’s `generativeai` SDK or REST API) with appropriate parameters (like which model – e.g., PaLM2 ‘text-bison-001’ – and perhaps temperature, etc.). The API returns the model’s generated answer, which we parse.
-     * Using **DeepSeek (Local Model)**: Alternatively, we have the capability to use a local LLM. DeepSeek R1 is a model that can be run through the Ollama server (as mentioned in the README optional setup). In that case, our generation service would instead send the prompt to the local Ollama API (which runs on localhost and serves the model) and get the answer. We abstracted this behind a unified interface so that the rest of the system doesn’t need to change whether we use PaLM or DeepSeek; it might be a configuration flag or environment variable that selects which LLM is used. The concept of an LLM “factory” or service is present in the design (we have an `llm_factory` module to create an LLM client based on config).
+     * Using **Google Gemini API**: We constructed a prompt that includes the retrieved text (context) and the user’s question. We then send this prompt to the Gemini text generation API (via Google’s `generativeai` SDK or REST API) with appropriate parameters (like which model – e.g., Gemini2 ‘text-bison-001’ – and perhaps temperature, etc.). The API returns the model’s generated answer, which we parse.
+     * Using **DeepSeek (Local Model)**: Alternatively, we have the capability to use a local LLM. DeepSeek R1 is a model that can be run through the Ollama server (as mentioned in the README optional setup). In that case, our generation service would instead send the prompt to the local Ollama API (which runs on localhost and serves the model) and get the answer. We abstracted this behind a unified interface so that the rest of the system doesn’t need to change whether we use Gemini or DeepSeek; it might be a configuration flag or environment variable that selects which LLM is used. The concept of an LLM “factory” or service is present in the design (we have an `llm_factory` module to create an LLM client based on config).
   6. **Controller/Orchestrator:** This is essentially the FastAPI endpoint logic that brings everything together. It receives the query from the user (HTTP request), calls the embedding service (for query vector), calls the database (for retrieval), constructs the prompt and calls the LLM service, then returns the answer as an HTTP response. In code, this lives in the route function (for example, the `/query` POST endpoint).
 
 * Additionally, on the **side** of the server, we have a **document ingestion pipeline** (which can be triggered by an API endpoint or a separate script). This pipeline reads raw documents (from disk or via an upload), splits them into chunks, and for each chunk computes embeddings and inserts into the database. This part usually runs offline or prior to serving queries (though it could be on-demand as well, e.g., an endpoint to add a new document dynamically).
@@ -329,7 +329,7 @@ In terms of deployment architecture:
 * We containerized components using Docker Compose. Typically, we run a container for PostgreSQL (with pgvector installed), and a container for the FastAPI app (which includes the embedding and LLM client logic). The frontend can be served either as static files from the FastAPI container or run separately in development. The containers communicate over a docker network. This is a fairly standard web app deployment pattern, with the twist that the web app’s logic includes these AI tasks.
 * If using the local LLM, there might be an additional container or external process for Ollama (running the DeepSeek model). In our dev setup, we sometimes ran Ollama on a separate machine (accessible via an **OLLAMA\_BASE\_URL** environment variable), but one could containerize it as well. Similarly, if Cohere’s embedding service was self-hostable (it’s not; it’s a cloud API), that could be internal, but we treat it as an external dependency that just requires internet access from the FastAPI container when needed.
 
-To ensure the architecture is clear: **FastAPI** acts as the coordinator and provides a unified interface (HTTP API) for the client. **PostgreSQL** (with pgvector) is the stateful storage of knowledge. **Cohere API** and **PaLM API** are external services leveraged for their specialized AI capabilities. The modular design means we can replace components (for example, switch to a different embedding model or even a different vector store like Chroma) without affecting the overall flow, as long as the interfaces remain the same.
+To ensure the architecture is clear: **FastAPI** acts as the coordinator and provides a unified interface (HTTP API) for the client. **PostgreSQL** (with pgvector) is the stateful storage of knowledge. **Cohere API** and **Gemini API** are external services leveraged for their specialized AI capabilities. The modular design means we can replace components (for example, switch to a different embedding model or even a different vector store like Chroma) without affecting the overall flow, as long as the interfaces remain the same.
 
 We also incorporate **Alembic** (mentioned in the question prompt) – this is used for database migrations. Architecturally, it means we have a mechanism to version control the DB schema. For example, the initial migration would create the table for storing documents and ensure the `vector` extension is enabled. Alembic’s place in architecture is simply to manage the database’s structure over time; it’s more of a development/DevOps tool rather than a runtime component. In the code structure, Alembic configuration lives in the `alembic/` directory and an `alembic.ini` file (under src/ perhaps), and one runs `alembic upgrade head` to apply migrations. This ensures the database has the needed schema (tables, indexes) before the app runs.
 
@@ -369,7 +369,7 @@ Once the above is done, the system is ready to answer questions. The ingestion c
    Here `<->` is the operator for cosine distance in pgvector (or `<=>` depending on version). The query returns, say, top 5 chunks with smallest distance (meaning highest similarity) to the query. These chunks are presumed to be the most relevant pieces of information from our knowledge base for answering the question.
 5. **Context Assembly:** The retrieved chunk texts are then assembled into a single context string. We might simply concatenate them, possibly with some separator or bullet points. We might also include their source info if needed (though in our minimal approach we likely just take the text).
 6. **Prompt Construction:** We now prepare the prompt for the LLM. Typically, the prompt could be something like: “You are an expert AI. Use the following context to answer the question.\n\nContext:\n\[retrieved texts]\n\nQuestion: \[user’s question]\nAnswer:”. We design the prompt such that the model understands it should use the context to answer and not diverge. In our code, we might have a template string (as in the EnterpriseDB code snippet which shows a template with \[INST]... context ... question ...\[/INST] and “Answer:”). Using a consistent prompt template helps guide the model’s behavior.
-7. **LLM Generation:** The prompt is sent to the LLM service. If using Google PaLM API, we call the `generate_text` method with our prompt. If using DeepSeek via Ollama, we call the Ollama API (likely an HTTP call to `localhost:11434/generate` with model “deepseek-r1” and the prompt, or using their Python SDK). The LLM processes the prompt and produces a completion, which is the answer. For example, it might return: “RAG is used to provide LLMs with external knowledge so they can give accurate, up-to-date answers grounded in that data.” (hopefully something along those lines, ideally including details from context).
+7. **LLM Generation:** The prompt is sent to the LLM service. If using Google Gemini API, we call the `generate_text` method with our prompt. If using DeepSeek via Ollama, we call the Ollama API (likely an HTTP call to `localhost:11434/generate` with model “deepseek-r1” and the prompt, or using their Python SDK). The LLM processes the prompt and produces a completion, which is the answer. For example, it might return: “RAG is used to provide LLMs with external knowledge so they can give accurate, up-to-date answers grounded in that data.” (hopefully something along those lines, ideally including details from context).
 8. **Post-processing:** We take the raw output from the LLM. We might do minimal cleanup (strip whitespace, etc.). If our design required adding citations in the answer, we would handle that here (e.g., if we wanted to append source titles, etc., but in our minimal approach we might not do that unless manually).
 9. **API Response:** FastAPI then sends back a JSON response to the frontend with the answer (and possibly any other info like the retrieved context for debugging, but normally just the answer text).
 10. **Frontend Display:** The user’s browser receives the answer and displays it in the UI, typically below the question box as a chat bubble or answer field.
@@ -390,8 +390,8 @@ During this process, a few important workflow considerations:
 
 * **Top-K Selection:** The number of chunks K to retrieve is a parameter. We used a reasonable default like 3 or 5. Too few might miss info, too many might overflow the LLM context or dilute relevance.
 * **Similarity Threshold:** Sometimes we might set a threshold on vector similarity (distance) and ignore chunks that are too dissimilar (to avoid introducing irrelevant text). In our implementation, we might implicitly rely on the distance ordering, but one can apply a condition like in pseudo-code: retrieve where distance < 0.7 (assuming normalized distances in \[0,2] for cosine). In the provided code snippet from another project, they did exactly that: they computed a `retrieval_condition` with a threshold on cosine distance.
-* **LLM Token Limits:** We must ensure the combined context + question doesn’t exceed the LLM’s input size. In practice, since our chunks are moderate and K is small, we likely fit well within PaLM’s limits (which are large). For the local model DeepSeek R1 (1.5B parameters), context window might be smaller (maybe 2048 tokens), so we still should be fine with a few paragraphs of context.
-* **Latency:** The embedding call and LLM call introduce some latency. Cohere’s embedding API might take e.g. 0.2 seconds for one text, the DB retrieval is extremely fast (millisecond range for a few thousand entries maybe), and the LLM (PaLM via API might take 1-2 seconds to generate a few sentences). So overall, the user might experience 2-3 seconds delay for an answer. Using the local DeepSeek might be slower if running on CPU, but could still be a few seconds. This is acceptable for our use case (it’s not real-time high-frequency trading – a couple seconds for an answer is fine for QA).
+* **LLM Token Limits:** We must ensure the combined context + question doesn’t exceed the LLM’s input size. In practice, since our chunks are moderate and K is small, we likely fit well within Gemini’s limits (which are large). For the local model DeepSeek R1 (1.5B parameters), context window might be smaller (maybe 2048 tokens), so we still should be fine with a few paragraphs of context.
+* **Latency:** The embedding call and LLM call introduce some latency. Cohere’s embedding API might take e.g. 0.2 seconds for one text, the DB retrieval is extremely fast (millisecond range for a few thousand entries maybe), and the LLM (Gemini via API might take 1-2 seconds to generate a few sentences). So overall, the user might experience 2-3 seconds delay for an answer. Using the local DeepSeek might be slower if running on CPU, but could still be a few seconds. This is acceptable for our use case (it’s not real-time high-frequency trading – a couple seconds for an answer is fine for QA).
 * **Error handling:** If any step fails (e.g., Cohere API not responding, or no relevant results found), the system should handle it gracefully. We implemented basic error checks. For instance, if no context is found, we might still send the question alone to the LLM (or return “I don’t know”). If the LLM API errors out, we’d send an error message. These are engineering details we took into account but not the focus of architecture.
 
 The above workflow implements the **RAG pattern** described conceptually by IBM and others: we have a build time embedding of data and a runtime retrieval + prompting. Our pipeline is essentially that pattern in action.
@@ -597,25 +597,25 @@ One point from references: The Cohere docs mention embedding can be used for “
 
 In summary, the **Cohere Embeddings API integration** allowed us to implement the “vectorization” part of our RAG architecture easily and effectively. It is abstracted as an “Embedding Service” in our architecture diagram, interfacing between raw text and the vector database. Its purpose is clear: given any text (document or query), return a vector that goes into our vector space model of knowledge.
 
-### 4.5. LLM Integration (Google PaLM API and DeepSeek Models)
+### 4.5. LLM Integration (Google Gemini API and DeepSeek Models)
 
-The final piece of the RAG pipeline is the **Large Language Model (LLM)** that generates answers using the retrieved context. Our system is designed to be flexible in the LLM integration: it can either call an external LLM via API (Google’s PaLM 2 in our case), or use a local LLM (we experimented with the **DeepSeek R1** model). In this subsection, we detail how each integration is set up and how the system decides which to use.
+The final piece of the RAG pipeline is the **Large Language Model (LLM)** that generates answers using the retrieved context. Our system is designed to be flexible in the LLM integration: it can either call an external LLM via API (Google’s Gemini in our case), or use a local LLM (we experimented with the **DeepSeek R1** model). In this subsection, we detail how each integration is set up and how the system decides which to use.
 
-**Google PaLM API Integration:**
+**Google Gemini API Integration:**
 
-* **What is PaLM?** PaLM (Pathways Language Model) is Google’s advanced family of large language models. PaLM 2, for example, is used in Google’s Bard and other applications. Google provides an API (as part of Google Cloud’s Vertex AI or Generative AI offerings) that allows developers to send prompts to PaLM and get generated text back. The model we targeted (as per documentation) is often called `text-bison-001` (for text completion) or `chat-bison-001` (for chat).
-* **API Access:** To use the PaLM API, we need to have an API key or be authenticated through Google Cloud. In our project, we likely set up a Google Cloud project, enabled the PaLM (Generative AI) API, and obtained credentials (which might be an API key or using ADC – Application Default Credentials).
+* **What is Gemini?** Gemini (Pathways Language Model) is Google’s advanced family of large language models. Gemini, for example, is used in Google’s Bard and other applications. Google provides an API (as part of Google Cloud’s Vertex AI or Generative AI offerings) that allows developers to send prompts to Gemini and get generated text back. The model we targeted (as per documentation) is often called `text-bison-001` (for text completion) or `chat-bison-001` (for chat).
+* **API Access:** To use the Gemini API, we need to have an API key or be authenticated through Google Cloud. In our project, we likely set up a Google Cloud project, enabled the Gemini (Generative AI) API, and obtained credentials (which might be an API key or using ADC – Application Default Credentials).
 * **Integration in Code:** We used Google’s provided SDK or an HTTP approach. Google had a Python library (as part of `google.generativeai` module) which we could install. This library allows something like:
 
   ```python
-  import google.generativeai as palm
-  palm.configure(api_key=os.environ["PALM_API_KEY"])
-  response = palm.generate_text(model="models/text-bison-001", prompt=prompt, temperature=0.7, max_output_tokens=256)
+  import google.generativeai as Gemini
+  Gemini.configure(api_key=os.environ["Gemini_API_KEY"])
+  response = Gemini.generate_text(model="models/text-bison-001", prompt=prompt, temperature=0.7, max_output_tokens=256)
   answer = response.result # or some attribute with the text
   ```
 
   This is a hypothetical snippet. Essentially, we send the `prompt` which includes context and question, and get back an `answer` string.
-* **Prompt Design:** We carefully craft the prompt for PaLM. Possibly:
+* **Prompt Design:** We carefully craft the prompt for Gemini. Possibly:
 
   ```
   Below is some context and a question. Answer the question using only the given context.
@@ -627,11 +627,11 @@ The final piece of the RAG pipeline is the **Large Language Model (LLM)** that g
   Answer:
   ```
 
-  By explicitly instructing it to use only the context, we reduce hallucination and encourage it to ground the answer. PaLM is a strong model and often will comply with these instructions if clear.
-* **Parameters:** We might set `temperature` to a low value (e.g., 0.2-0.5) to get more deterministic answers, as in Q\&A factual tasks high creativity is not desired. Also `max_tokens` maybe around a few hundred to allow a detailed answer if needed. PaLM’s models can produce fairly long outputs, but since our context is relatively small, the answers won’t be extremely long anyway.
-* **Response Handling:** We parse the response. The PaLM API might return the text directly or in a structure. We ensure to extract it and maybe strip any leading newlines or format. Usually, the first result is what we want. (The API can return multiple candidates if asked; we likely request just one).
+  By explicitly instructing it to use only the context, we reduce hallucination and encourage it to ground the answer. Gemini is a strong model and often will comply with these instructions if clear.
+* **Parameters:** We might set `temperature` to a low value (e.g., 0.2-0.5) to get more deterministic answers, as in Q\&A factual tasks high creativity is not desired. Also `max_tokens` maybe around a few hundred to allow a detailed answer if needed. Gemini’s models can produce fairly long outputs, but since our context is relatively small, the answers won’t be extremely long anyway.
+* **Response Handling:** We parse the response. The Gemini API might return the text directly or in a structure. We ensure to extract it and maybe strip any leading newlines or format. Usually, the first result is what we want. (The API can return multiple candidates if asked; we likely request just one).
 * **Error Handling:** The API might have rate limits or quotas. We ensure to catch exceptions from the SDK (like if credentials invalid or API down). If an error happens, our system can fall back or return an error message. We possibly log it.
-* **Choosing PaLM vs Local:** We likely used an environment flag or config to choose the LLM mode. For example, an env var `LLM_PROVIDER` set to `GOOGLE` or `LOCAL`. Or simply, if `PALM_API_KEY` is present, use PaLM; if not, try local.
+* **Choosing Gemini vs Local:** We likely used an environment flag or config to choose the LLM mode. For example, an env var `LLM_PROVIDER` set to `GOOGLE` or `LOCAL`. Or simply, if `Gemini_API_KEY` is present, use Gemini; if not, try local.
 
 **DeepSeek R1 Local Model Integration:**
 
@@ -639,46 +639,46 @@ The final piece of the RAG pipeline is the **Large Language Model (LLM)** that g
 * **Running the model:** We mentioned using **Ollama**, which is a tool for running large language models locally. Ollama provides a server that can host models like LLaMA, Alpaca, and possibly DeepSeek. In our README optional steps, it references running an Ollama server on Colab with Ngrok. That suggests we didn’t directly host it on our machine (maybe due to hardware constraints) but set it up on a cloud Colab instance and tunneled in. Regardless, the concept is that we have a local-ish endpoint for the LLM.
 * **Integration in Code:** If using Ollama, we communicate via HTTP or CLI. Possibly we have an environment `OLLAMA_BASE_URL` which if set, means we send our prompt to `OLLAMA_BASE_URL/generate` with a payload specifying model name (“deepseek-r1”) and the prompt. In code, we could use `requests.post` to that URL. The returned answer might stream or come in a single chunk depending on how the server API is. Alternatively, there might be an Ollama Python SDK. If not using Ollama, one could also integrate through the HuggingFace Transformers library directly (loading the DeepSeek model in code with `AutoModelForCausalLM` and running it). However, that requires the model weights and a suitable hardware. The mention in user prompt suggests we primarily considered the Ollama approach.
 * **Performance:** DeepSeek R1, if it’s e.g. 1.5B or 7B parameters, should be able to run on a modern PC with enough memory (8GB+ for model). In CPU mode it might be slow, but with quantization (like 4-bit via bitsandbytes or Ollama’s optimizations) it can be somewhat faster. Still, likely answering might take a few seconds to tens of seconds depending on the complexity. For testing, that’s fine.
-* **Quality:** According to some sources, DeepSeek R1 is good at logical reasoning and handling provided evidence. It’s likely less fluent or “knowledgeable” than PaLM2 because of scale, but if our context provides the needed info, it can compose a correct answer. The local model’s advantage: all data stays local (which satisfies the full “privacy” objective).
+* **Quality:** According to some sources, DeepSeek R1 is good at logical reasoning and handling provided evidence. It’s likely less fluent or “knowledgeable” than Gemini2 because of scale, but if our context provides the needed info, it can compose a correct answer. The local model’s advantage: all data stays local (which satisfies the full “privacy” objective).
 * **Switching to Local:** We ensure our code can seamlessly switch. Possibly something like:
 
   ```python
-  if LLM_MODE == "PALM":
-      answer = palm_api_generate(prompt)
+  if LLM_MODE == "Gemini":
+      answer = Gemini_api_generate(prompt)
   elif LLM_MODE == "LOCAL":
       answer = ollama_generate(prompt)
   ```
 
   So the rest of the pipeline doesn’t care, it just gets an answer string.
-* **Example usage:** If user asks “What is the capital of France?” and (for argument’s sake) we had provided context “France’s capital is Paris.”, DeepSeek should produce “The capital of France is Paris.” as well as PaLM would. For a more complex question requiring summarizing multiple points from context, PaLM might produce a more verbose or polished answer than DeepSeek. But DeepSeek would still aim to extract from context, given it’s tuned for that.
+* **Example usage:** If user asks “What is the capital of France?” and (for argument’s sake) we had provided context “France’s capital is Paris.”, DeepSeek should produce “The capital of France is Paris.” as well as Gemini would. For a more complex question requiring summarizing multiple points from context, Gemini might produce a more verbose or polished answer than DeepSeek. But DeepSeek would still aim to extract from context, given it’s tuned for that.
 * **Ollama usage example:** Possibly running something like `ollama generate -m deepseek-r1 "Context: ... Question: ... Answer:"`. The integration might call a subprocess if not using an HTTP API, but likely they have an API. Using Ngrok/Colab as mentioned means we treat it as an HTTP address.
 
 **Why both options?**
 We included both to showcase the flexibility and for practical reasons:
 
-* We can use PaLM for higher quality answers if internet is available and we have budget (PaLM API might cost per token).
+* We can use Gemini for higher quality answers if internet is available and we have budget (Gemini API might cost per token).
 * We have DeepSeek as a fallback or when offline entirely (no internet). It aligns with the project’s goal of local capability.
 * Having both also helped in development to test the pipeline quickly with local small models before integrating the large external one.
 
 **In sum**:
 
-* The **Google PaLM API integration** represents the external powerhouse LLM which likely gives the best results. It’s integrated by sending it our composed prompt and getting back a completion. This was implemented with Google’s client library configured with our API key.
+* The **Google Gemini API integration** represents the external powerhouse LLM which likely gives the best results. It’s integrated by sending it our composed prompt and getting back a completion. This was implemented with Google’s client library configured with our API key.
 * The **DeepSeek integration** represents the local self-hosted alternative. Using Ollama and possibly the dev.to guidelines on DeepSeek, we set up a local model endpoint and wrote our code to call it. The DeepSeek model is known to be good at RAG scenarios (for example, an online description notes it’s optimized for factual retrieval tasks).
 * We maintain a consistent interface: both yield an answer string given the same prompt, so our main logic doesn’t change. The user wouldn’t necessarily know which one was used for a particular answer unless we tell them or if there is a quality difference.
 
 **Testing differences**:
-We likely tested with both modes. For instance, we might run a query in PaLM mode and get an answer, then run the same query in local mode and compare. We found that PaLM’s answers might be more fluent or detailed, whereas DeepSeek might be more terse or occasionally might misinterpret if context not clear. But if context is straightforward and the question direct, both should yield correct info. This dual approach validated that our system doesn’t rely on proprietary tech solely – it can function with open models as well, which is an important validation of the design.
+We likely tested with both modes. For instance, we might run a query in Gemini mode and get an answer, then run the same query in local mode and compare. We found that Gemini’s answers might be more fluent or detailed, whereas DeepSeek might be more terse or occasionally might misinterpret if context not clear. But if context is straightforward and the question direct, both should yield correct info. This dual approach validated that our system doesn’t rely on proprietary tech solely – it can function with open models as well, which is an important validation of the design.
 
-**Consideration – Model prompt differences:** We might have had to tweak the prompt slightly depending on model. For example, PaLM might follow instructions well, while a smaller model might need more explicit prompting or might include the context in the answer. We possibly tested a bit to ensure DeepSeek doesn’t just regurgitate context verbatim or that it actually comprehends the format. If needed, we could instruct “Don’t just copy the context, answer in your own words”.
+**Consideration – Model prompt differences:** We might have had to tweak the prompt slightly depending on model. For example, Gemini might follow instructions well, while a smaller model might need more explicit prompting or might include the context in the answer. We possibly tested a bit to ensure DeepSeek doesn’t just regurgitate context verbatim or that it actually comprehends the format. If needed, we could instruct “Don’t just copy the context, answer in your own words”.
 
-**Security (for PaLM)**: We treat the API key securely. It might be in an env var like `GOOGLE_API_KEY` or use service account JSON. Only the prompt (which includes user query and context which come from user-provided docs) is sent to Google’s servers. That content could be sensitive, so if using PaLM, we have to trust Google with it. For fully sensitive use, use the local path.
+**Security (for Gemini)**: We treat the API key securely. It might be in an env var like `GOOGLE_API_KEY` or use service account JSON. Only the prompt (which includes user query and context which come from user-provided docs) is sent to Google’s servers. That content could be sensitive, so if using Gemini, we have to trust Google with it. For fully sensitive use, use the local path.
 
-**Costs**: Using PaLM will incur token usage costs. For a small project test, it might fit in a free trial or negligible cost. But at scale, one must consider budgeting. The local model, however, runs at electricity cost but no per-query fee. That’s another trade-off. For demonstration, we likely did not hit significant costs.
+**Costs**: Using Gemini will incur token usage costs. For a small project test, it might fit in a free trial or negligible cost. But at scale, one must consider budgeting. The local model, however, runs at electricity cost but no per-query fee. That’s another trade-off. For demonstration, we likely did not hit significant costs.
 
 **Conclusion**:
 The LLM integration is the “brains” that produces the final answer, but crucially it’s fed by the “memory” (the retrieved context) from the earlier steps. In architecture terms, the **LLM service** is an interchangeable component behind an interface (generateAnswer(prompt)->text). We successfully implemented two variants of this interface:
 
-* One that calls out to **Google’s PaLM 2** (a state-of-the-art 2023 model, giving our project cutting-edge capability).
+* One that calls out to **Google’s Gemini** (a state-of-the-art 2023 model, giving our project cutting-edge capability).
 * Another that uses a **local DeepSeek model** (aligning with the project’s local-first philosophy and showing off open-source AI use).
 
 The ability to plug either in and get a working system demonstrates the modularity of our design. It also practically means the project isn’t locked in to a single vendor or model – it can adapt as needed. For example, in future one could plug in OpenAI’s GPT-4 or Meta’s LLaMA 2, etc., by writing a small adapter, and everything else stays the same.
@@ -710,7 +710,7 @@ This section provides a rundown of the major technologies, libraries, and tools 
 
   Here `QueryModel` could be a Pydantic model (data class) that defines the structure of the request (e.g., it has a field `question: str`). FastAPI automatically parses JSON into this model and validates it.
 * FastAPI automatically generates an interactive API documentation (Swagger UI) because of the type hints and Pydantic models. This was useful for testing endpoints manually. In development, going to `http://localhost:5000/docs` shows the available endpoints.
-* It’s asynchronous-friendly. We may not have heavy concurrency needs, but FastAPI allows endpoints to be `async def` and handle many requests in parallel. (For calling external APIs like Cohere or PaLM, we could even use async HTTP calls to not block the server loop, but for simplicity we might have used sync calls and relied on thread pool default behavior).
+* It’s asynchronous-friendly. We may not have heavy concurrency needs, but FastAPI allows endpoints to be `async def` and handle many requests in parallel. (For calling external APIs like Cohere or Gemini, we could even use async HTTP calls to not block the server loop, but for simplicity we might have used sync calls and relied on thread pool default behavior).
 
 **Project Structure:**
 
@@ -945,39 +945,39 @@ Cohere offers a hosted API that, given some text input, returns a numerical embe
 
 * It's an external service, so not self-hosted, but we treat it like a library function in our code.
 * It's called from within FastAPI route handling (synchronously, likely). If we were concerned about the blocking call delaying the async loop, we could consider making it an `async` call or offloading to a thread with `run_in_threadpool`. However, cohere’s library doesn’t natively support async, so we either accept the block (which in Uvicorn’s case just ties up one worker for that request, which is fine if we have multiple or low concurrency).
-* Because it’s a remote call, it’s one of the slower steps. Typically embedding \~ few hundred ms, retrieval from DB \~ few ms, LLM (PaLM) \~ 1-2s, then answer send. So it’s not dominating but is part of total latency.
+* Because it’s a remote call, it’s one of the slower steps. Typically embedding \~ few hundred ms, retrieval from DB \~ few ms, LLM (Gemini) \~ 1-2s, then answer send. So it’s not dominating but is part of total latency.
 
 **In summary:**
 The Cohere Embeddings API is a key tool in our stack for enabling semantic search. We utilized its ease-of-use through the Python SDK, and integrated it cleanly as a service in our backend code. It’s clearly delineated in our code: any time we need an embedding, we call the Cohere client. The separation of concerns is nice: we didn’t have to implement any ML model ourselves for embeddings, just plug into Cohere’s offering, which according to their docs, turns text into a “list of floating point numbers that captures semantic information”. That fits perfectly with our pipeline which then stores those numbers in the vector DB and uses them for retrieval.
 
-### 5.4. Google PaLM API / DeepSeek LLM for Query Answering
+### 5.4. Google Gemini API / DeepSeek LLM for Query Answering
 
-This section covers the LLMs we integrated for generating answers: the **Google PaLM API** and the **DeepSeek LLM** (run via Ollama). Both are part of our stack as interchangeable components fulfilling the role of “the language model that produces the final answer.”
+This section covers the LLMs we integrated for generating answers: the **Google Gemini API** and the **DeepSeek LLM** (run via Ollama). Both are part of our stack as interchangeable components fulfilling the role of “the language model that produces the final answer.”
 
-**Google PaLM API:**
+**Google Gemini API:**
 
-* We used Google’s PaLM (Pathways Language Model) through their Generative AI API. Specifically, likely PaLM 2 model (text-bison or chat-bison as appropriate).
+* We used Google’s Gemini (Pathways Language Model) through their Generative AI API. Specifically, likely Gemini model (text-bison or chat-bison as appropriate).
 * The technology is provided by Google as a cloud service. The `google.generativeai` Python library (or an HTTP request) is how we access it.
 * We configured an API key (maybe the same key used for multiple Google AI services if on the Generative AI support). Possibly we had to enable the API in Google Cloud console.
 * In code, after configuring:
 
   ```python
-  import google.generativeai as palm
-  palm.configure(api_key=os.getenv("PALM_API_KEY"))
+  import google.generativeai as Gemini
+  Gemini.configure(api_key=os.getenv("Gemini_API_KEY"))
   ```
 
   We can call:
 
   ```python
-  response = palm.generate_text(prompt=prompt, model="models/text-bison-001", temperature=0.3, candidate_count=1)
+  response = Gemini.generate_text(prompt=prompt, model="models/text-bison-001", temperature=0.3, candidate_count=1)
   answer = response.generations[0]['content']
   ```
 
   (This is based on Google’s docs; might vary).
-* We likely wrote a small wrapper function `generate_answer_with_palm(prompt: str) -> str` to hide the specifics in one place.
+* We likely wrote a small wrapper function `generate_answer_with_Gemini(prompt: str) -> str` to hide the specifics in one place.
 * The integration is synchronous (the library likely does sync HTTP calls under the hood).
 * We handle exceptions (if API returns error or usage limit hit) gracefully, maybe logging and raising a custom error that FastAPI can return as an HTTP error.
-* The PaLM API was likely used by default if available because it potentially gives the best answer quality.
+* The Gemini API was likely used by default if available because it potentially gives the best answer quality.
 
 **DeepSeek LLM via Ollama:**
 
@@ -999,7 +999,7 @@ This section covers the LLMs we integrated for generating answers: the **Google 
 
   (Just a conceptual snippet; exact depends on Ollama’s API format).
 * If streaming was required to get output, we might need to iterate on chunks, but likely we kept it simple, possibly reading the whole response.
-* The environment variable `USE_DEEPSEEK` or `LLM_MODE=local` might control this. The code could detect if `PALM_API_KEY` not set but `OLLAMA_BASE_URL` is set, then use local.
+* The environment variable `USE_DEEPSEEK` or `LLM_MODE=local` might control this. The code could detect if `Gemini_API_KEY` not set but `OLLAMA_BASE_URL` is set, then use local.
 * We presumably had to consider that local LLMs might be less deterministic and might produce additional text not needed. For instance, some models might echo the prompt if not instructed well or include the word "Answer:" in output. We refine prompt or do some post-processing to remove any prompt artifacts.
 
 **Mapping to project structure:**
@@ -1009,29 +1009,29 @@ This section covers the LLMs we integrated for generating answers: the **Google 
 
   ```python
   class LLMService:
-      def __init__(self, provider="palm"):
-          if provider == "palm":
-              palm.configure(api_key=...)
+      def __init__(self, provider="Gemini"):
+          if provider == "Gemini":
+              Gemini.configure(api_key=...)
           self.provider = provider
       def generate(self, prompt: str) -> str:
-          if self.provider == "palm":
-              return palm.generate_text(... prompt...).result
+          if self.provider == "Gemini":
+              return Gemini.generate_text(... prompt...).result
           elif self.provider == "deepseek":
               return generate_via_ollama(prompt)
   ```
 
   And then in FastAPI route we do `answer = llm_service.generate(prompt)`.
-* The actual configuration might be in environment or a config class. E.g., `settings.llm_provider = "PALM"` or "DEESEEK". Based on presence of keys we can decide.
+* The actual configuration might be in environment or a config class. E.g., `settings.llm_provider = "Gemini"` or "DEESEEK". Based on presence of keys we can decide.
 
 **Significance in stack:**
 
 * These LLMs are essentially the "AI engine" for generation. They are the most advanced part of our stack in terms of capability.
-* Using PaLM means our system leverages one of the best language models available via an external service – boosting answer quality likely significantly, at cost of reliance on external.
+* Using Gemini means our system leverages one of the best language models available via an external service – boosting answer quality likely significantly, at cost of reliance on external.
 * Using DeepSeek ensures the system can be fully self-contained if needed, aligning with one of the motivations. It also showcases usage of open source AI models, which is a trending area. (DeepSeek is a specialized fine-tune that presumably stands for "deep search"? It’s marketed as reasoning-capable for agent tasks, so presumably good at synthesizing given info).
 
 **Dependencies and Tools:**
 
-* We needed the `google-generativeai` (or `vertexai`) library for PaLM. Possibly listed as `google-generativeai` in requirements.
+* We needed the `google-generativeai` (or `vertexai`) library for Gemini. Possibly listed as `google-generativeai` in requirements.
 * Also likely needed `requests` for calling the Ollama API (if not already needed elsewhere).
 * Possibly needed to ensure `certifi` etc. for secure requests but that’s usually packaged.
 
@@ -1043,19 +1043,19 @@ This section covers the LLMs we integrated for generating answers: the **Google 
 
 **Performance:**
 
-* PaLM’s API is reasonably fast, but does have network latency and queue. Perhaps an answer in a second or two.
+* Gemini’s API is reasonably fast, but does have network latency and queue. Perhaps an answer in a second or two.
 * DeepSeek’s performance depends on hardware and quantization. On CPU might be >5 seconds for an answer. On GPU (like Colab’s T4 maybe) could be 1-2 seconds. It’s okay if not immediate, as long as within acceptable user wait (\~few seconds).
 * If performance was not ideal, we could scale by having multiple processes or threads. But since our use is interactive, we focus on one at a time usage.
 
 **Resilience:**
 
-* We might have a fallback: if PaLM fails (maybe due to outage or key expired), we could attempt to use DeepSeek automatically. Not sure if we implemented that, but it’s conceptually possible (try PaLM, except Exception: log and use local).
+* We might have a fallback: if Gemini fails (maybe due to outage or key expired), we could attempt to use DeepSeek automatically. Not sure if we implemented that, but it’s conceptually possible (try Gemini, except Exception: log and use local).
 * That would ensure an answer, albeit maybe less polished.
 
 **Wrap-up:**
 This component of our stack – the LLMs – is what actually **generates** the human-readable answer. The rest of the stack (FastAPI, Postgres/pgvector, Cohere embeddings) prepares the data such that the LLM can do a better job. Without the LLM, we’d just have retrieval (like a search engine listing relevant text). Without retrieval, the LLM might hallucinate. Together, they produce correct, contextual answers.
 
-We demonstrated flexibility in our stack by not being married to a single LLM. Today it’s PaLM and DeepSeek; tomorrow it could be OpenAI GPT-4 or Anthropic’s Claude or a new open model. By abstracting the “LLM integration” behind a simple interface (function or class), the rest of the system remains unchanged when swapping this out. This modular design is a strength of our tech stack choices, making the system future-proof in an environment where new LLMs are released frequently.
+We demonstrated flexibility in our stack by not being married to a single LLM. Today it’s Gemini and DeepSeek; tomorrow it could be OpenAI GPT-4 or Anthropic’s Claude or a new open model. By abstracting the “LLM integration” behind a simple interface (function or class), the rest of the system remains unchanged when swapping this out. This modular design is a strength of our tech stack choices, making the system future-proof in an environment where new LLMs are released frequently.
 
 ### 5.5. Frontend Framework (Web Interface)
 
@@ -1231,7 +1231,7 @@ To facilitate easy setup and deployment of the entire system (backend, database,
   This example is based on how many orchestrations look. The specific may differ.
 * We saw in the earlier medium snippet that they did a similar mapping but naming could differ (they used 'myragapp' and 'react-ui').
 * The `depends_on` ensures database starts before backend tries to connect, etc.
-* The environment for backend from .env includes things like `OPENAI_API_KEY` (if used), `COHERE_API_KEY`, `PALM_API_KEY`, DB creds (though those also given via environment on DB service, our backend might use them to connect).
+* The environment for backend from .env includes things like `OPENAI_API_KEY` (if used), `COHERE_API_KEY`, `Gemini_API_KEY`, DB creds (though those also given via environment on DB service, our backend might use them to connect).
 * Also things like `PGVECTOR` extension enabling might require either running a command at start (some projects use the environment `POSTGRESQL_EXTENSIONS=vector` or run a custom init script).
   Possibly we have a `.sql` file in a docker-entrypoint-initdb.d volume to run `CREATE EXTENSION vector;`. Or we use an image that already has it enabled (like `postgres:15` plus an apt-get install of `postgresql-vector` extension).
   If using the official image, we might do:
@@ -1362,7 +1362,7 @@ Below, we break down the backend code structure first, then the frontend, and fi
   * `services/` or `utils/` – directory for service classes or utility functions that perform tasks like embedding, LLM calls, database queries.
 
     * Perhaps `services/embedding_service.py` – with the Cohere client initialization and functions to embed texts.
-    * `services/llm_service.py` or `services/llm_factory.py` – to handle calling PaLM or DeepSeek depending on config.
+    * `services/llm_service.py` or `services/llm_factory.py` – to handle calling Gemini or DeepSeek depending on config.
     * `services/database.py` or `utils/db.py` – for establishing DB connection (SessionLocal, engine). And functions like `get_top_k_chunks(query_vec)` as a direct DB operation, if not done inline in routes.
     * `services/documents.py` – if we had a separate ingestion routine to add documents from files or from an upload, that could be encapsulated.
   * `core/` or `config/` – sometimes projects have a folder for core configurations:
@@ -1675,15 +1675,15 @@ Key service/utility modules likely present:
   * Purpose: Provide a unified interface for calling the language model to generate answers.
   * Likely implemented as a class or just functions:
 
-    * `initialize_palm_client()` – configures the Google API client with the key.
-    * `generate_answer_with_palm(prompt: str) -> str`.
+    * `initialize_Gemini_client()` – configures the Google API client with the key.
+    * `generate_answer_with_Gemini(prompt: str) -> str`.
     * `initialize_deepseek_client()` – maybe just storing the base URL for the Ollama server.
     * `generate_answer_with_deepseek(prompt: str) -> str`.
     * Then a logic to choose which to use based on config or environment:
       Possibly at startup, we detect:
 
       ```python
-      USE_PALM = bool(os.getenv("PALM_API_KEY"))
+      USE_Gemini = bool(os.getenv("Gemini_API_KEY"))
       USE_DEEPSEEK = bool(os.getenv("OLLAMA_BASE_URL"))
       ```
 
@@ -1691,18 +1691,18 @@ Key service/utility modules likely present:
 
       ```python
       def generate_answer(prompt: str) -> str:
-          if USE_PALM:
-              return generate_answer_with_palm(prompt)
+          if USE_Gemini:
+              return generate_answer_with_Gemini(prompt)
           elif USE_DEEPSEEK:
               return generate_answer_with_deepseek(prompt)
           else:
               raise RuntimeError("No LLM configured")
       ```
-    * Or we might embed the selection in the configuration by an env var like `LLM_PROVIDER=palm` or `local`, to explicitly control it.
-  * Handles specifics like model name and parameters (e.g., `model='text-bison-001', temperature=0.5, max_tokens=256` for PaLM).
+    * Or we might embed the selection in the configuration by an env var like `LLM_PROVIDER=Gemini` or `local`, to explicitly control it.
+  * Handles specifics like model name and parameters (e.g., `model='text-bison-001', temperature=0.5, max_tokens=256` for Gemini).
   * For DeepSeek/Ollama, sends HTTP requests, possibly uses `requests` or `httpx`.
   * Could handle streaming; but likely we keep it simple (block until full response).
-  * Manage error: e.g., if PaLM API returns error or times out, it could either try fallback (DeepSeek) or raise exception for route to catch.
+  * Manage error: e.g., if Gemini API returns error or times out, it could either try fallback (DeepSeek) or raise exception for route to catch.
   * This module ensures rest of code (especially the route logic) doesn’t care *how* the answer is generated, just that given a prompt you get a response. So, if we want to swap out for a different model, we just change this service accordingly.
 
 * **RAG Pipeline Service (`src/services/pipeline.py` perhaps):**
@@ -1738,7 +1738,7 @@ Key service/utility modules likely present:
     ```python
     class Settings(BaseSettings):
         cohere_api_key: str
-        palm_api_key: str = None
+        Gemini_api_key: str = None
         ollama_base_url: str = None
         db_url: str
         class Config:
@@ -1774,11 +1774,11 @@ The services and utilities implement the heart of the application’s logic:
 
 * **Embedding service** communicates with the Cohere API.
 * **Database service** handles vector similarity search in Postgres.
-* **LLM service** communicates with Google PaLM or local DeepSeek.
+* **LLM service** communicates with Google Gemini or local DeepSeek.
 * **Pipeline** ties these together into the RAG flow.
 * **Misc utils** support tasks like building prompts or loading config.
 
-This structure ensures that if any part needs to change (say, switching from Cohere to OpenAI for embeddings, or from PaLM to another model), we can modify the respective service module without needing to rewrite route logic or other parts of the app. It also makes the code easier to understand, because each module has a clear role. For example, someone wanting to adjust how the context is prepared would know to look at the pipeline or prompt-building utility, whereas someone wanting to adjust database query performance would look at the database service.
+This structure ensures that if any part needs to change (say, switching from Cohere to OpenAI for embeddings, or from Gemini to another model), we can modify the respective service module without needing to rewrite route logic or other parts of the app. It also makes the code easier to understand, because each module has a clear role. For example, someone wanting to adjust how the context is prepared would know to look at the pipeline or prompt-building utility, whereas someone wanting to adjust database query performance would look at the database service.
 
 ### 6.5. Frontend Module Overview (/frontend)
 
@@ -2199,7 +2199,7 @@ function answer_query(question):
 
 4. **LLM Generation:** The `LLMFactory.generate` is called with the prompt. Under the hood, this will:
 
-   * If using Google PaLM: call the API and get the answer text.
+   * If using Google Gemini: call the API and get the answer text.
    * If using DeepSeek/local: send to local model and get answer text.
      The model sees something like:
 
@@ -2343,7 +2343,7 @@ The project was structured into a series of phases, each corresponding to key fe
   *Milestone:* Connect an actual LLM to generate answers from retrieved context.
   *Actions:*
 
-  * Choose initial LLM provider (OpenAI’s GPT-3 was likely used first, given known API patterns; then extended to Google PaLM).
+  * Choose initial LLM provider (OpenAI’s GPT-3 was likely used first, given known API patterns; then extended to Google Gemini).
   * Implement LLMFactory and OpenAI client (e.g., using `openai` library) to call GPT-3 with the constructed prompt.
   * Test query end-to-end: ask a question, retrieve chunks, build prompt, get answer from GPT-3. Evaluate correctness of answers.
   * If authorized, also test with Google’s model by switching config (this required setting up GCP project and API key).
@@ -2488,7 +2488,7 @@ To complement our textual description, this chapter presents visual diagrams tha
 ### **9.1 System Architecture Diagram**
 
 &#x20;*Figure 9.1: System Architecture Overview.*
-*This diagram depicts the high-level architecture of the Local RAG system. The user interacts through a web frontend (browser), which communicates with the FastAPI backend. The backend consists of various services: the Document Ingestion module (handling file parsing and chunking), the Embedding Service (calling Cohere API to produce vectors), the Vector Database (PostgreSQL with pgvector) storing document embeddings, and the LLM Integration module (which interfaces with external Large Language Models like Google PaLM API or a local DeepSeek model). The arrows indicate the flow of data: users upload documents which are processed and stored, and when a query is asked, the system retrieves relevant vectors from the database and sends the compiled context to the LLM to generate an answer.*
+*This diagram depicts the high-level architecture of the Local RAG system. The user interacts through a web frontend (browser), which communicates with the FastAPI backend. The backend consists of various services: the Document Ingestion module (handling file parsing and chunking), the Embedding Service (calling Cohere API to produce vectors), the Vector Database (PostgreSQL with pgvector) storing document embeddings, and the LLM Integration module (which interfaces with external Large Language Models like Google Gemini API or a local DeepSeek model). The arrows indicate the flow of data: users upload documents which are processed and stored, and when a query is asked, the system retrieves relevant vectors from the database and sends the compiled context to the LLM to generate an answer.*
 
 In Figure 9.1, notice how the components are arranged:
 
@@ -2499,7 +2499,7 @@ In Figure 9.1, notice how the components are arranged:
   * **Embedding Service**: for each chunk or query, calls **Cohere API** (top) to get embeddings.
   * **PostgreSQL (with pgvector)**: stores the text chunks and embeddings in a persistent store.
   * **Retrieval & RAG Orchestrator**: when a query comes, it embeds the query, uses pgvector to find similar chunks, then constructs a prompt.
-  * **LLM Connector**: sends the prompt to an LLM. The diagram shows two possible paths: one to **Google PaLM API** (external service on the right, representing cloud LLM) and one to **Local DeepSeek Model** (external but could be on-premise, shown at bottom-right). Only one is used at a time depending on configuration.
+  * **LLM Connector**: sends the prompt to an LLM. The diagram shows two possible paths: one to **Google Gemini API** (external service on the right, representing cloud LLM) and one to **Local DeepSeek Model** (external but could be on-premise, shown at bottom-right). Only one is used at a time depending on configuration.
 * The **Answer** flows back from the LLM to the backend, which then responds to the user’s browser with the answer (and sources).
 
 This architecture ensures modularity: each external dependency (Cohere, LLMs) is abstracted behind service interfaces, and the database decouples storage from processing.
@@ -2509,7 +2509,7 @@ This architecture ensures modularity: each external dependency (Cohere, LLMs) is
 To detail the dynamic behavior, Figure 9.2 illustrates the data flow through the system when a user asks a question:
 
 &#x20;*Figure 9.2: Data Flow in Retrieval-Augmented Generation Pipeline.*
-*(Adapted from NVIDIA’s RAG pipeline concept). The sequence is numbered: (1) The user question is sent to the backend. (2) The backend generates an embedding of the question using Cohere (converting it to a query vector). (3) This query vector is used to perform a similarity search in the pgvector database, retrieving the top relevant document chunks (shown as colored documents in the vector database icon). (4) The retrieved text chunks are concatenated into a context which is combined with the question to form a prompt. (5) This prompt is fed into the LLM (Google PaLM or DeepSeek model), which generates an answer. (6) The backend returns this answer to the user, often with citations referencing the documents used.*
+*(Adapted from NVIDIA’s RAG pipeline concept). The sequence is numbered: (1) The user question is sent to the backend. (2) The backend generates an embedding of the question using Cohere (converting it to a query vector). (3) This query vector is used to perform a similarity search in the pgvector database, retrieving the top relevant document chunks (shown as colored documents in the vector database icon). (4) The retrieved text chunks are concatenated into a context which is combined with the question to form a prompt. (5) This prompt is fed into the LLM (Google Gemini or DeepSeek model), which generates an answer. (6) The backend returns this answer to the user, often with citations referencing the documents used.*
 
 Following the numbers in the diagram:
 
@@ -2566,7 +2566,7 @@ While the project successfully met its objectives, there are several areas that 
 
   * Cohere (and others) have multilingual embedding models which could be used.
   * If documents are in another language, we could either embed them with a multilingual model or translate them to English (via an API) then proceed, depending on needs.
-  * The LLM side would need to handle the language (Google PaLM and DeepSeek might have multilingual capabilities). Alternatively, an intermediate step: if user asks a question in another language but docs are English, we translate question to English, do RAG, then translate answer back. This is a complex pipeline but could open up usage to non-English corpora or users.
+  * The LLM side would need to handle the language (Google Gemini and DeepSeek might have multilingual capabilities). Alternatively, an intermediate step: if user asks a question in another language but docs are English, we translate question to English, do RAG, then translate answer back. This is a complex pipeline but could open up usage to non-English corpora or users.
   * A simpler initial step: ensure Unicode and diacritics are handled properly in parsing and embedding (which likely they are, but testing with e.g. a French PDF would be prudent).
 
 ### **10.4 System Integration and Deployment**
@@ -2603,11 +2603,11 @@ In this final section, we provide supplementary material that supports the main 
 
 * **Transformer:** A type of neural network architecture known for its self-attention mechanism. Transformers power modern language models (e.g., BERT, GPT) and can generate context-aware embeddings and text.
 
-* **LLM (Large Language Model):** A very large Transformer-based model trained on massive text corpora. It can generate human-like text. Examples include OpenAI’s GPT-3/GPT-4, Google’s PaLM, and open models like DeepSeek LLM.
+* **LLM (Large Language Model):** A very large Transformer-based model trained on massive text corpora. It can generate human-like text. Examples include OpenAI’s GPT-3/GPT-4, Google’s Gemini, and open models like DeepSeek LLM.
 
 * **Cohere:** An AI platform offering NLP models via API. In our project, Cohere’s embedding API converts text into vectors capturing semantic meaning.
 
-* **Google PaLM API:** Google’s service for their Pathways Language Model, accessible to developers. We use it as one option to generate answers from provided context.
+* **Google Gemini API:** Google’s service for their Pathways Language Model, accessible to developers. We use it as one option to generate answers from provided context.
 
 * **DeepSeek LLM:** An open-source large language model (available in 7B and 67B parameter versions) noted for high performance in reasoning tasks. We integrate it as a local model for answering queries without external API calls.
 
